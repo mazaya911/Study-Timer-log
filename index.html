@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Timer Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <style>
+  /* Study Timer Log - scribble / notebook style, shared by both pages */
+  :root {
+    --paper: #fffdf6; --dots: #d9d2c0; --ink: #3b3550; --ink-soft: #6d668a;
+    --pink: #ffd6e0; --blue: #cfe8ff; --yellow: #fff2b3; --mint: #d3f5df; --lilac: #e5d9ff; --peach: #ffdcc2;
+    --line: #4a4368;
+    --hand: 'Caveat', 'Patrick Hand', 'Comic Sans MS', cursive;
+    --hand2: 'Patrick Hand', 'Comic Sans MS', cursive;
+    --body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    /* irregular corners = wobbly hand-drawn look */
+    --wobble: 255px 18px 225px 18px / 18px 225px 18px 255px;
+    --wobble2: 18px 240px 16px 230px / 230px 16px 240px 18px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; color: var(--ink); font-family: var(--body); line-height: 1.5;
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--dots) 1.3px, transparent 1.3px);
+    background-size: 24px 24px;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1, h2, h3 { font-family: var(--hand); margin: 0; line-height: 1.1; }
+  h1 { font-size: clamp(2.4rem, 8vw, 3.6rem); }
+  h2 { font-size: 1.9rem; }
+  .hint, .small { color: var(--ink-soft); font-size: .9rem; }
+  .hidden { display: none !important; }
+  
+  /* header */
+  .top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .title-wrap { position: relative; }
+  .squiggle { display: block; width: 190px; height: 14px; margin-top: 2px; }
+  .doodle { position: absolute; pointer-events: none; }
+  .nav-link {
+    font-family: var(--hand); font-size: 1.5rem; color: var(--ink); text-decoration: none;
+    background: var(--yellow); border: 2.5px solid var(--line); border-radius: var(--wobble);
+    padding: 4px 20px; transition: transform .15s;
+  }
+  .nav-link:hover, .nav-link:focus-visible { transform: rotate(-3deg) scale(1.05); }
+  .badge {
+    display: inline-block; font-family: var(--hand2); font-size: 1rem; padding: 2px 14px;
+    border: 2px solid var(--line); border-radius: var(--wobble2); background: var(--mint);
+  }
+  .badge.local { background: var(--peach); }
+  
+  /* cards with tape */
+  .card {
+    position: relative; background: #fff; border: 2.5px solid var(--line); border-radius: var(--wobble2);
+    padding: 26px 22px 20px; margin: 30px 0; box-shadow: 4px 5px 0 rgba(74, 67, 104, .15);
+  }
+  .card::before {
+    content: ''; position: absolute; top: -13px; left: 50%; width: 90px; height: 24px; transform: translateX(-50%) rotate(-3deg);
+    background: rgba(255, 214, 224, .8); border-left: 2px dashed rgba(74,67,104,.25); border-right: 2px dashed rgba(74,67,104,.25);
+  }
+  .card.blue::before { background: rgba(207, 232, 255, .85); transform: translateX(-50%) rotate(2deg); }
+  .card.mint::before { background: rgba(211, 245, 223, .9); }
+  .card.yellow::before { background: rgba(255, 242, 179, .9); transform: translateX(-50%) rotate(4deg); }
+  .card h2 { margin-bottom: 12px; }
+  
+  /* form */
+  label, .label { display: block; font-family: var(--hand); font-size: 1.45rem; margin: 14px 0 4px; }
+  input, select {
+    width: 100%; font: inherit; font-size: 1.05rem; color: var(--ink); background: #fffef9;
+    border: 2.5px solid var(--line); border-radius: var(--wobble); padding: 9px 16px;
+  }
+  input:focus, select:focus, button:focus-visible, a:focus-visible, .bar-row:focus-visible {
+    outline: 3px dashed #7d6bd6; outline-offset: 3px;
+  }
+  .counter { float: right; font-size: .85rem; color: var(--ink-soft); font-family: var(--body); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 140px; }
+  
+  button {
+    font-family: var(--hand); font-size: 1.5rem; color: var(--ink); cursor: pointer;
+    background: var(--blue); border: 2.5px solid var(--line); border-radius: var(--wobble);
+    padding: 6px 22px; box-shadow: 3px 3px 0 var(--line); transition: transform .12s, box-shadow .12s;
+  }
+  button:hover:not(:disabled) { transform: translate(-1px, -2px) rotate(-1deg); box-shadow: 4px 5px 0 var(--line); }
+  button:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--line); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-start { background: var(--mint); } .btn-pause { background: var(--yellow); } .btn-stop { background: var(--pink); }
+  .btn-save { background: var(--lilac); width: 100%; margin-top: 20px; font-size: 1.8rem; }
+  
+  /* tabs */
+  .tabs { display: flex; gap: 8px; margin: 6px 0 12px; }
+  .tab { flex: 1; box-shadow: none; font-size: 1.35rem; background: #fff; }
+  .tab[aria-selected="true"] { background: var(--yellow); transform: rotate(-1deg); }
+  
+  /* stopwatch */
+  .stopwatch { text-align: center; padding: 8px 0 4px; }
+  .digits {
+    font-family: var(--hand2), monospace; font-size: clamp(3.4rem, 16vw, 5.5rem); letter-spacing: 3px;
+    display: inline-block; padding: 0 26px; background: var(--mint); border: 2.5px solid var(--line);
+    border-radius: var(--wobble2); font-variant-numeric: tabular-nums;
+  }
+  .timer-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .recorded { min-height: 1.6em; font-family: var(--hand2); font-size: 1.1rem; margin-top: 8px; }
+  
+  .message { margin-top: 14px; padding: 8px 14px; border: 2.5px dashed var(--line); border-radius: var(--wobble); font-family: var(--hand2); font-size: 1.2rem; }
+  .message.ok { background: var(--mint); } .message.err { background: var(--pink); }
+  .big-number { font-family: var(--hand); font-size: 2.6rem; }
+  
+  /* dashboard */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin: 26px 0; }
+  .stat { border: 2.5px solid var(--line); padding: 14px 14px 10px; text-align: center; position: relative; }
+  .stat:nth-child(1) { background: var(--pink); border-radius: var(--wobble); transform: rotate(-1.2deg); }
+  .stat:nth-child(2) { background: var(--blue); border-radius: var(--wobble2); transform: rotate(1deg); }
+  .stat:nth-child(3) { background: var(--yellow); border-radius: var(--wobble); transform: rotate(-.6deg); }
+  .stat:nth-child(4) { background: var(--mint); border-radius: var(--wobble2); transform: rotate(1.3deg); }
+  .stat .label { margin: 0; font-size: 1.25rem; }
+  .stat .value { font-family: var(--hand); font-size: clamp(1.7rem, 4.2vw, 2.3rem); line-height: 1.15; overflow-wrap: break-word; }
+  .range { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 6px; }
+  .range button { font-size: 1.3rem; box-shadow: none; background: #fff; padding: 3px 18px; }
+  .range button[aria-pressed="true"] { background: var(--lilac); transform: rotate(-1.5deg); }
+  
+  .bar-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; margin: 10px 0; cursor: pointer; border-radius: 12px; padding: 2px 4px; transition: opacity .2s, background .2s; }
+  .bar-row.dim { opacity: .4; }
+  .bar-row.active, .bar-row:hover { background: rgba(255, 242, 179, .6); }
+  .bar-name { font-family: var(--hand); font-size: 1.4rem; overflow-wrap: anywhere; line-height: 1.05; }
+  .bar-track { min-height: 36px; }
+  .bar-fill {
+    height: 36px; min-width: 8px; width: 0; border: 2.5px solid var(--line); border-radius: 6px 22px 8px 20px / 20px 8px 22px 6px;
+    display: flex; align-items: center; padding: 0 10px; font-family: var(--hand2); white-space: nowrap; font-size: .95rem;
+    transition: width 1s cubic-bezier(.2, .9, .3, 1.1);
+  }
+  .filter-note { font-family: var(--hand2); min-height: 1.5em; }
+  .week-svg { width: 100%; height: auto; display: block; }
+  .week-svg text { font-family: var(--hand2); fill: var(--ink); }
+  
+  .notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; margin-top: 18px; }
+  .note {
+    position: relative; padding: 22px 16px 14px; border: 2px solid var(--line); border-radius: 4px 14px 6px 12px / 12px 6px 14px 4px;
+    box-shadow: 3px 4px 0 rgba(74, 67, 104, .15); overflow-wrap: anywhere;
+  }
+  .note::before { content: ''; position: absolute; top: -9px; left: 45%; width: 56px; height: 16px; background: rgba(255,255,255,.75); border: 1.5px dashed rgba(74,67,104,.3); transform: rotate(-4deg); }
+  .note .subj { font-family: var(--hand); font-size: 1.7rem; line-height: 1.1; }
+  .note .mins { font-family: var(--hand2); font-size: 1.15rem; }
+  .note .text { margin: 6px 0; font-size: .95rem; }
+  .top-list { list-style: none; margin: 0; padding: 0; }
+  .top-list li { display: flex; justify-content: space-between; gap: 10px; font-family: var(--hand); font-size: 1.6rem; padding: 2px 0; border-bottom: 2px dotted var(--dots); }
+  .center { text-align: center; }
+  
+  @media (max-width: 520px) {
+    .bar-row { grid-template-columns: 1fr; gap: 2px; }
+    .card { padding: 24px 14px 16px; }
+    .digits { padding: 0 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+  
+  
+  /* --- single-page additions: top-level view switcher + setup banner --- */
+  .view-tabs { display: flex; gap: 10px; }
+  .view-tab {
+    font-family: var(--hand); font-size: 1.5rem; color: var(--ink); text-decoration: none; cursor: pointer;
+    background: #fff; border: 2.5px solid var(--line); border-radius: var(--wobble);
+    padding: 4px 20px; transition: transform .15s, background .15s;
+  }
+  .view-tab[aria-selected="true"] { background: var(--yellow); transform: rotate(-2deg); }
+  .view-tab:hover { transform: rotate(-2deg) scale(1.04); }
+  .view { display: none; }
+  .view.active { display: block; }
+  
+  .setup-banner {
+    background: var(--pink); border: 2.5px solid var(--line); border-radius: var(--wobble2);
+    padding: 20px 22px; margin-bottom: 26px; box-shadow: 4px 5px 0 rgba(74, 67, 104, .15);
+  }
+  .setup-banner h2 { margin-bottom: 10px; }
+  .setup-banner ol { margin: 10px 0 0; padding-left: 22px; }
+  .setup-banner li { margin: 6px 0; }
+  .setup-banner code {
+    background: #fffdf0; border: 1.5px solid var(--line); border-radius: 6px; padding: 1px 7px;
+    font-family: 'Patrick Hand', monospace; font-size: .95em;
+  }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <div class="title-wrap">
+        <h1>✏️ Study Timer Log</h1>
+        <svg class="squiggle" viewBox="0 0 190 14" aria-hidden="true"><path d="M2 8 Q14 0 26 8 T50 8 T74 8 T98 8 T122 8 T146 8 T170 8 T188 8" fill="none" stroke="#7d6bd6" stroke-width="3" stroke-linecap="round"/></svg>
+        <span class="badge local" id="mode-badge">Loading…</span>
+      </div>
+      <nav class="view-tabs" role="tablist" aria-label="Page">
+        <button type="button" class="view-tab" id="nav-log" role="tab" aria-selected="true">✏️ Log a session</button>
+        <button type="button" class="view-tab" id="nav-dashboard" role="tab" aria-selected="false">📊 Dashboard</button>
+      </nav>
+    </header>
+
+    <section id="setup-banner" class="setup-banner hidden">
+      <h2>⚙️ One quick setup step</h2>
+      <p>This page isn't connected to a Google Sheet yet. In <code>app.js</code>, set <code>APPS_SCRIPT_URL</code> to your deployed Apps Script web app URL:</p>
+      <ol>
+        <li>Make a Google Sheet with header row: <code>Timestamp, Subject, Minutes, Note, Nickname</code>.</li>
+        <li>Open <em>Extensions &gt; Apps Script</em>, paste in the contents of <code>code.gs</code>, and save.</li>
+        <li>Click <em>Deploy &gt; New deployment</em>, choose <strong>Web app</strong>, set <em>Execute as: Me</em> and <em>Who has access: Anyone</em>, then deploy and copy the URL.</li>
+        <li>Paste that URL as the value of <code>APPS_SCRIPT_URL</code> at the top of <code>app.js</code>, save, and reload this page.</li>
+      </ol>
+    </section>
+
+    <!-- ======================= LOG VIEW ======================= -->
+    <section id="view-log" class="view active">
+      <form id="log-form" class="card blue" novalidate>
+        <h2>Log a study session ⭐</h2>
+
+        <label for="subject">Subject</label>
+        <select id="subject" required>
+          <option value="">Pick a subject…</option>
+          <option>Math</option><option>Science</option><option>English</option><option>History</option>
+          <option>Programming</option><option>Art</option><option value="Other">Other</option>
+        </select>
+        <div id="custom-wrap" class="hidden">
+          <label for="custom-subject">Your subject</label>
+          <input id="custom-subject" maxlength="30" placeholder="e.g. Chemistry">
+        </div>
+
+        <div class="label">How long?</div>
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab" id="tab-timer" role="tab" aria-selected="true">⏱ Live timer</button>
+          <button type="button" class="tab" id="tab-manual" role="tab" aria-selected="false">✍️ Type minutes</button>
+        </div>
+
+        <section id="panel-timer" class="stopwatch">
+          <div class="digits" id="digits" role="timer" aria-live="off">00:00</div>
+          <div class="timer-buttons">
+            <button type="button" class="btn-start" id="btn-start">▶ Start</button>
+            <button type="button" class="btn-pause" id="btn-pause" disabled>⏸ Pause</button>
+            <button type="button" class="btn-stop" id="btn-stop" disabled>⏹ Stop</button>
+          </div>
+          <div class="recorded" id="recorded" aria-live="polite"></div>
+        </section>
+
+        <section id="panel-manual" class="hidden">
+          <label for="minutes">Minutes (1 to 720)</label>
+          <input id="minutes" type="number" min="1" max="720" step="1" inputmode="numeric" placeholder="45">
+        </section>
+
+        <div class="row">
+          <div>
+            <label for="nickname">Nickname <span class="hint">(optional)</span></label>
+            <input id="nickname" maxlength="20" placeholder="Mia">
+          </div>
+        </div>
+        <label for="note">What did you study? <span class="counter" id="note-count">0/100</span></label>
+        <input id="note" maxlength="100" placeholder="(optional) fractions chapter">
+
+        <button type="submit" class="btn-save" id="btn-save">Save session</button>
+        <div id="message" class="message hidden" role="status"></div>
+      </form>
+
+      <section class="card yellow center">
+        <h2>Today so far 🌞</h2>
+        <div class="big-number" id="today-total">…</div>
+        <div class="hint" id="today-detail"></div>
+      </section>
+    </section>
+
+    <!-- ===================== DASHBOARD VIEW ===================== -->
+    <section id="view-dashboard" class="view">
+      <div class="range" role="group" aria-label="Time range">
+        <button type="button" data-range="today" aria-pressed="false">Today</button>
+        <button type="button" data-range="week" aria-pressed="false">This week</button>
+        <button type="button" data-range="all" aria-pressed="true">All time</button>
+      </div>
+
+      <div id="status" class="message hidden" role="status"></div>
+
+      <section class="stats" id="stats">
+        <div class="stat"><div class="label">Time studied</div><div class="value" id="stat-total">–</div></div>
+        <div class="stat"><div class="label">Sessions</div><div class="value" id="stat-count">–</div></div>
+        <div class="stat"><div class="label">Favourite subject</div><div class="value" id="stat-top">–</div></div>
+        <div class="stat"><div class="label">Day streak 🔥</div><div class="value" id="stat-streak">–</div></div>
+      </section>
+
+      <section class="card pink">
+        <h2>Time per subject ⭐</h2>
+        <div class="hint">Tap a bar to filter the notes below. Tap again to clear.</div>
+        <div id="bars"></div>
+      </section>
+
+      <section class="card mint">
+        <h2>Last 7 days 📅</h2>
+        <div id="week-chart"></div>
+      </section>
+
+      <section class="card yellow hidden" id="top-card">
+        <h2>Top studiers 🏆</h2>
+        <ol class="top-list" id="top-list"></ol>
+      </section>
+
+      <section class="card blue">
+        <h2>Recent sessions 📝</h2>
+        <div class="filter-note" id="filter-note"></div>
+        <div class="notes" id="notes"></div>
+        <div class="center" style="margin-top:20px"><button type="button" id="more" class="hidden">Show more</button></div>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
